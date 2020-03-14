@@ -1,72 +1,75 @@
-class IllegalTagwordException implements Exception {
-  String message;
-  final word;
-  IllegalTagwordException([this.word]) {
-    if (message == null) {
-      message = 'Tagword has illegal character';
-    } else {
-      message = '"$word" has illegal character';
-    }
-    message = 'IllegalTagword: $message';
-  }
+import './exception.dart';
 
-  @override
-  String toString() {
-    if (message == null) {
-      return 'Tagname has illegal character';
-    } else {
-      message = '"$word" has illegal character';
-    }
-    return 'IllegalTagname: $message';
-  }
-}
-
-class IllegalTokenException implements Exception {
-  String token;
-  int index;
-  IllegalTokenException(token, index);
-
-  @override
-  String toString() {
-    return 'IllegalTokenException: Illegal token "$token" at $index';
-  }
-}
-
+/// [Symbol] represents symbols used in sample XML
 enum Symbol {
+  /// A '<' smaller than symbol representing opening tag's beginning
   tagBeg,
+
+  /// A '</' symbol representing closing tag's beginning
   tagEnd,
+
+  /// '>' symbol
   close,
+
+  /// **"** symbol
   double_quots,
+
+  /// **'** symbol
   single_quots,
+
+  /// '\n' character
   lineBreak,
+
+  /// Regular space ' ' in tags
   space,
-  question,
+
+  /// Any other string
   stringtext,
+
+  /// "<?" representing either instruction tag or document description tag start
   instruction,
+
+  /// "?>" representing either instruction tag or document description tag start
   instructionEnd,
+
+  /// The "=" assignment operator
   assignment,
+
+  /// '\t' character
   tabSpace,
-  ignore,
 }
 
+/// [Text] represents text from outside of tags
 class Text {
+  /// The [String] this [Text] holds
   final String text;
-  // normal text
+
+  /// [Text] represents text from outside of tags
   Text(this.text);
 
-  /// [Text] to String
+  /// Converts [Text] to [String]
   String toText() => text;
   @override
 
-  /// [Text] to String with double quotes
+  /// [Text] to [String] with added double quotes
   String toString() => '"$text"';
 }
 
+/// This represents text used under tags as tagname or tag-property
 class TagWord {
+  /// The [String] this holds
   final String tagWord;
+  bool _isTagname = true;
+
+  bool get isTagname => _isTagname;
+
+  set isTagname(bool isTagname) {
+    _isTagname = isTagname;
+  }
 
   /// [TagWord] of a tag which is a property name or tagname
   TagWord(this.tagWord) {
+    // check if tagword uses legal characters
     if (!_isValidTagword(tagWord)) {
       throw IllegalTagwordException(tagWord);
     }
@@ -78,7 +81,10 @@ class TagWord {
 
   /// [TagWord] to String with single quotes
   String toString() => "'$tagWord'";
+
+  /// Check if [String] is a valid [TagWord]
   static bool _isValidTagword(String text) {
+    // Characters which shouldn't be in tagwords
     List<String> notAllowed;
     notAllowed = [
       '!',
@@ -110,16 +116,19 @@ class TagWord {
       '~',
       ' ',
     ];
+    // If start of tagname is '-' or '.' then it is illegal
     if ((text[0] ?? '') == '-' || (text[0] ?? '') == '.') {
       return false;
     }
+    // If start of tagname is a number then it is illegal
     try {
       var number = double.parse(text[0]);
       return false;
     } on FormatException {
-      // ignore
+      // ignoring because first character is NaN
     }
 
+    // check if any character used in tagword is illegal
     for (var syms in notAllowed) {
       if (text.contains(syms)) {
         return false;
@@ -129,106 +138,120 @@ class TagWord {
   }
 }
 
+/// [XmlParser] creates an [XmlDocument] from [String] in xml format
 class XmlParser {
+  /// The regular String passed to this [XmlParser]
   final String text;
-  int i = 0;
-  String _target, _target_next;
-  bool valueSeq;
-  bool tagWordSeq;
-  bool normalTextSeq;
+  // value of index at
+  int _i = 0;
+  // Target character
+  String _target;
+  // The character after [_target]
+  String _target_next;
+  // Under sequence of value for a tag's property
+  bool _valueSeq;
+  // Under sequence of a tagname or tag property
+  bool _tagWordSeq;
+  // Under sequence of text outside of the tag
+  bool _normalTextSeq;
+
   XmlParser(this.text);
+
+  /// [parser] parses and converts to [XmlDocument] based on token context
+  void parser() {}
+
+  /// [lexer] adds more meaning to tokens
   List<dynamic> lexer() {
     List<dynamic> tokens;
     tokens = [];
-    valueSeq = false;
-    tagWordSeq = false;
-    normalTextSeq = false;
-    String cacheTagword;
-    String cacheText;
+    _valueSeq = false;
+    _tagWordSeq = false;
+    _normalTextSeq = false;
 
-    for (i = 0; i < text.length; i++) {
-      _target = text[i];
-      if (i + 1 < text.length) _target_next = text[i + 1];
+    // Stores String temporarily
+    String cacheString;
+
+    // Started lexing in an iterator fashion
+    for (_i = 0; _i < text.length; _i++) {
+      _target = text[_i];
+      if (_i + 1 < text.length) _target_next = text[_i + 1];
+
+      // Stores Tokenized character
       Symbol char;
+
       char = tokenizer();
-      if (tagWordSeq && char != Symbol.stringtext) {
-        try {
-          tokens.add(
-            TagWord(
-              cacheTagword,
-            ),
-          );
-        } catch (e) {
-          print(
-              "at index $i\n$char\n$tokens\n$valueSeq\n$tagWordSeq\n$normalTextSeq\n$cacheTagword\n$cacheText");
-          rethrow;
-        }
-        tagWordSeq = false;
-        cacheTagword = '';
+
+      // if previously the sequence was a tag's name or property but the current character isn't
+      // then add a [TagWord] with the [cachedString] to token list
+      if (_tagWordSeq && char != Symbol.stringtext) {
+        tokens.add(
+          TagWord(
+            cacheString,
+          ),
+        );
+        _tagWordSeq = false;
+        cacheString = '';
       }
+
       switch (char) {
         case Symbol.double_quots:
         case Symbol.single_quots:
-          if (normalTextSeq) {
-            cacheText = '$cacheText$_target';
-            break;
+          if (_normalTextSeq) {
+            // probably out of tags so insert raw character to cache
+            cacheString = '$cacheString$_target';
+          } else if (_valueSeq) {
+            // probably previous strings were value for a tag's property
+            // so add it to tokens as Text
+            tokens.add(Text(cacheString));
+            _valueSeq = false;
+            cacheString = '';
+          } else {
+            // probably start of a value sequence for a tag's properties
+            _valueSeq = true;
+            cacheString = '';
           }
-          if (valueSeq) {
-            tokens.add(Text(cacheText));
-          }
-          valueSeq = !valueSeq;
-          cacheText = '';
           break;
         case Symbol.assignment:
-          // TODO: To fix
-          // if (tagWordSeq) {
-          //   tagWordSeq = false;
-          // } else {
-          //   throw IllegalTokenException(_target, i);
-          // }
-          tokens.add(char);
+          if (!_normalTextSeq) {
+            // The previous TagWord is probably not a tagname,
+            // hence assign false to last TagWord
+            var lastTagword =
+                tokens.lastIndexWhere((token) => token is TagWord);
+            if (lastTagword >= 0) tokens[lastTagword].isTagname = false;
+            tokens.add(char);
+          } else if (_normalTextSeq) {
+            // Out of tags so should use '=' in cacheString
+            cacheString = '$cacheString$_target';
+          }
           break;
+        case Symbol.space:
+          if (_normalTextSeq) {
+            // probably out of tags so insert raw character to cache
+            cacheString = '$cacheString$_target';
+          } else {
+            tokens.add(char);
+          }
+          break;
+        // Out of tags so only normal texts exists
         case Symbol.instructionEnd:
         case Symbol.close:
-          if (tagWordSeq) {
-            tokens.add(
-              TagWord(
-                cacheTagword,
-              ),
-            );
-          }
-          tagWordSeq = false;
-          valueSeq = false;
-          normalTextSeq = true;
-          cacheText = '';
+          _tagWordSeq = false;
+          _valueSeq = false;
+          _normalTextSeq = true;
           tokens.add(char);
           break;
         case Symbol.tagEnd:
         case Symbol.tagBeg:
-          if (cacheText.isNotEmpty) {
-            tokens.add(Text(cacheText));
+          if (cacheString.isNotEmpty) {
+            tokens.add(Text(cacheString));
+            cacheString = '';
           }
           tokens.add(char);
-          tagWordSeq = true;
-          normalTextSeq = false;
-          break;
-        case Symbol.space:
-          tokens.add(char);
+          _tagWordSeq = true;
+          _normalTextSeq = false;
           break;
         case Symbol.stringtext:
-          if (valueSeq) {
-            cacheText = '$cacheText$_target';
-            break;
-          }
-          if (!tagWordSeq && !normalTextSeq) {
-            tagWordSeq = true;
-            cacheTagword = '';
-          }
-          if (tagWordSeq) {
-            cacheTagword = '$cacheTagword$_target';
-          }
-          break;
-        case Symbol.ignore:
+          cacheString = '$cacheString$_target';
           break;
         default:
           tokens.add(char);
@@ -237,27 +260,28 @@ class XmlParser {
     return tokens;
   }
 
+  /// [tokenizer] returns correct XML token identified from text
   Symbol tokenizer() {
     switch (_target) {
       case '<':
         if (_target_next == '/') {
-          i++;
+          _i++;
           return Symbol.tagEnd;
         } else if (_target_next == '?') {
-          i++;
+          _i++;
           return Symbol.instruction;
         }
         return Symbol.tagBeg;
       case '/':
         if (_target_next == '>') {
-          i++;
+          _i++;
           return Symbol.close;
         }
         break;
       case '>':
         return Symbol.close;
       case ' ':
-        if (valueSeq) {
+        if (_valueSeq) {
           return Symbol.stringtext;
         }
         return Symbol.space;
@@ -271,12 +295,12 @@ class XmlParser {
         return Symbol.tabSpace;
       case '?':
         if (_target_next == '>') {
-          i++;
+          _i++;
           return Symbol.instructionEnd;
         }
         return Symbol.stringtext;
       case '=':
-        if (valueSeq) {
+        if (_valueSeq) {
           return Symbol.stringtext;
         }
         return Symbol.assignment;

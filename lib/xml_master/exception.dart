@@ -1,5 +1,3 @@
-import './xml_document.dart';
-
 class UnexpectedTokenException implements Exception {
   final message;
 
@@ -11,5 +9,34 @@ class UnexpectedTokenException implements Exception {
       return 'Recieved an unexpected token in the XML document';
     }
     return 'UnexpectedToken: $message';
+  }
+}
+
+class IllegalTagwordException implements Exception {
+  String message;
+  final word;
+  IllegalTagwordException([this.word]) {
+    if (message == null) {
+      message = 'Tagword has illegal character';
+    } else {
+      message = '"$word" has illegal character';
+    }
+    message = 'IllegalTagword: $message';
+  }
+
+  @override
+  String toString() {
+    return message;
+  }
+}
+
+class IllegalTokenException implements Exception {
+  String token;
+  int index;
+  IllegalTokenException(token, index);
+
+  @override
+  String toString() {
+    return 'IllegalTokenException: Illegal token "$token" at $index';
   }
 }

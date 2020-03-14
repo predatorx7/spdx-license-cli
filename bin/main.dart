@@ -8,17 +8,23 @@ import 'package:sample/matcher.dart' as match;
 import 'package:sample/sample.dart' as sample;
 import 'package:sample/verbose_print.dart';
 
-// Enum to show [target]'s type ie URL or local file address
+// [target]'s type ie URL or local file address
 enum _TargetType { url, filePath, spdxURL, none }
 
 void main(List<String> arguments) async {
-  // The target file/URL
-  String target, htarget;
-  // Hardcoded address of xml spdx license list
+  // The [target] file path or URL
+  String target;
+
+  // The [target] relative path to hardcoded address
+  String htarget;
+
+  // Hardcoded address of spdx license list in xml
   final spdxLicensePath =
       'https://raw.githubusercontent.com/spdx/license-list-XML/master/src';
-  // The file which holds string from [target]
+
+  // The file which will held string from [target]
   File file;
+
   // [target]'s type ie URL or local file address
   _TargetType useAs;
 
@@ -56,6 +62,7 @@ void main(List<String> arguments) async {
 
   parsedArgs = parser.parse(arguments);
 
+  // Obtaining [target]'s path and validating it
   target = parsedArgs['path'];
   htarget = parsedArgs['hardcoded-path'];
   if (target.isEmpty && htarget.isEmpty) {
@@ -72,7 +79,7 @@ void main(List<String> arguments) async {
     useAs = _TargetType.none;
   }
 
-  // Get file
+  // Fetching [target] file
   switch (useAs) {
     case _TargetType.filePath:
       // Copies SPDX XML License file to temp folder
