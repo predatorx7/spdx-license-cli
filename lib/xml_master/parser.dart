@@ -1,4 +1,3 @@
-import 'package:sample/xml_master/stack.dart';
 import 'package:sample/xml_master/xml_document.dart';
 import 'package:sample/xml_master/xml_node.dart';
 
