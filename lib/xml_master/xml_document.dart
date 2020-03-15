@@ -1,37 +1,29 @@
 import './xml_node.dart';
 
+/// [XmlDocument] is an XML document tree.
 class XmlDocument {
-  XmlNode _root;
+  /// root [XmlNode] of this document (descendant)
+  XmlNode root;
 
-  XmlNode get root => _root;
+  String version;
 
-  set root(XmlNode root) {
-    _root = root;
+  String encoding;
+
+  int size;
+
+  /// [tabSize] will be the number of spaces to represent a single tab
+  int tabSize;
+
+  XmlDocument(this.root, this.version, this.encoding, this.size);
+
+  String toXmlString() => toString();
+
+  @override
+  String toString() {
+    String message;
+    message = '<?xml version="$version" encoding="$encoding"?>\n';
+    XmlNode current;
+    message = '$message$current';
+    return message;
   }
-
-  String _version;
-
-  String get version => _version;
-
-  set version(String version) {
-    _version = version;
-  }
-
-  String _encoding;
-
-  String get encoding => _encoding;
-
-  set encoding(String encoding) {
-    _encoding = encoding;
-  }
-
-  int _size;
-
-  int get size => _size;
-
-  set size(int size) {
-    _size = size;
-  }
-
-  XmlDocument(this._root, this._version, this._encoding, this._size);
 }

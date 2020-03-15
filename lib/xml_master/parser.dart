@@ -187,14 +187,17 @@ class XmlParser {
     XmlNode node1;
     XmlNode node2;
     XmlNode node3;
+    bool tabSpacesFixed = false;
     bool awaitValue = false;
     bool awaitInstructions = false;
+    bool awaitTagname = false;
     bool inEndTag = false;
-    bool expectEndTag = false;
     bool documentDeclarationCompleted = false;
     String awaitValueOfProp;
     for (var j = 0; j < tokens.length; j++) {
       target = tokens[j];
+      print(tagStack);
+      print(target);
       if (j + 1 < tokens.length) target_next = tokens[j + 1];
       if (target is Symbol) {
         switch (target) {
@@ -225,14 +228,12 @@ class XmlParser {
               prevNode.addChild(currentNode);
               currentNode.type = XmlNodeType.element;
             }
+            awaitTagname = true;
             break;
           case Symbol.tagEnd:
-            if (expectEndTag) {
-              inEndTag = true;
-              expectEndTag = false;
-            } else {
-              throw UnexpectedTokenException();
-            }
+            inEndTag = true;
+            currentNode = prevNode;
+            prevNode = null;
             break;
           case Symbol.double_quots:
             // ignore, lexer handled
@@ -291,12 +292,13 @@ class XmlParser {
                 currentNode = null;
                 inEndTag = false;
               } else {
+                print(currentNode);
+                print(prevNode);
                 throw UnexpectedTokenException(
                     'start & end tagnames don\'t match.');
               }
-            } else {
-              expectEndTag = true;
             }
+            awaitValue = false;
             break;
           case Symbol.selfClose:
             tagStack.removeLast();
@@ -306,6 +308,10 @@ class XmlParser {
         }
       }
       if (target is TagWord) {
+        if (inEndTag && tagStack.last != target.tagWord) {
+          throw UnexpectedTokenException('start & end tagnames don\'t match.');
+        }
+
         if (awaitInstructions && !documentDeclarationCompleted) {
           // For complete document declaration
           if (instTag == null) {
@@ -317,14 +323,18 @@ class XmlParser {
           }
           continue;
         }
-        if (currentNode.tagName == null) {
+        if (awaitTagname) {
           currentNode.tagName = target.tagWord;
           tagStack.add(currentNode.tagName);
+          awaitTagname = false;
           continue;
         }
-        currentNode.attributes[target.tagWord] = '';
-        awaitValue = true;
-        awaitValueOfProp = target.tagWord;
+        if (!inEndTag) {
+          /// End tag don't have attributes
+          currentNode.attributes[target.tagWord] = '';
+          awaitValue = true;
+          awaitValueOfProp = target.tagWord;
+        }
       }
       if (target is Text) {
         if (awaitInstructions && !documentDeclarationCompleted && awaitValue) {
@@ -348,13 +358,38 @@ class XmlParser {
             print('$tokens');
             rethrow;
           }
-
           awaitValue = false;
           awaitValueOfProp = null;
           continue;
         }
-        currentNode.text = target.text;
-        if (currentNode.attributes == null) {
+
+        /// Check and adjust if tabspaces out of tag else throw
+        if (currentNode == null) {
+          bool isFullSpace;
+          for (var char in target.text.split('')) {
+            isFullSpace = (char == ' ');
+            if (!isFullSpace) {
+              break;
+            }
+          }
+          if (!tabSpacesFixed && isFullSpace) {
+            tabSpacesFixed = true;
+            document.tabSize = target.text.length;
+            continue;
+          } else if (tabSpacesFixed && isFullSpace) {
+            var tabs = (target.text.length / document.tabSize).round();
+            if (tabs == 1) {
+              // a single tab
+            } else {
+              // multiple tabs
+            }
+            continue;
+          }
+          // Not spaces
+        }
+
+        /// handle tab spaces
+        if (currentNode == null) {
           currentNode.type = XmlNodeType.text;
         } else {
           currentNode.type = XmlNodeType.element;

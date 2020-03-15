@@ -17,8 +17,10 @@ enum XmlNodeType {
   element,
   text,
   comment,
+  noTextElement,
 }
 
+/// This as An XML node
 class XmlNode {
   /// Tag-name for this [XmlNode]
   String tagName;
@@ -91,12 +93,16 @@ class XmlNode {
     children.removeWhere((XmlNode i) => i.tagName == node.tagName);
   }
 
-  // Returns true if children exists
+  /// Returns true if children exists
   bool hasChildren() {
     if (children?.isEmpty ?? true) return false;
     return true;
   }
 
+  /// Number of child nodes in [children] of this [XmlNode]
+  int get childCount => children.length;
+
+  /// This node's position from root
   int positionFromRoot() {
     if (parent == null) return 0;
     return parent.positionFromRoot() + 1;
@@ -112,5 +118,28 @@ class XmlNode {
       }
     });
     return matchedElements;
+  }
+
+  @override
+  String toString() {
+    String message;
+    message = '<${tagName}';
+    for (var attribute in attributes.keys) {
+      message = '$message $attribute="${attributes[attribute]}"';
+    }
+    if (children?.isEmpty ?? true) {
+      message = '$message/>\n';
+      return message;
+    }
+    message = '$message>';
+    if (text?.isNotEmpty ?? true) {
+      message = '$message$text</$tagName>\n';
+      return message;
+    }
+    for (var node in children) {
+      message = '$message${node.toString()}';
+    }
+    message = '$message</$tagName>\n';
+    return message;
   }
 }
