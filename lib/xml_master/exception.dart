@@ -12,6 +12,20 @@ class UnexpectedTokenException implements Exception {
   }
 }
 
+class XmlParsingException implements Exception {
+  final message;
+
+  XmlParsingException([this.message]);
+
+  @override
+  String toString() {
+    if (message == null) {
+      return 'Parsing failed';
+    }
+    return 'XmlParsing: $message';
+  }
+}
+
 class IllegalTagwordException implements Exception {
   String message;
   final word;

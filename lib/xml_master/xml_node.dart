@@ -12,12 +12,22 @@ class RootNodeDeleteException implements Exception {
   }
 }
 
+enum XmlNodeType {
+  root,
+  element,
+  text,
+  comment,
+}
+
 class XmlNode {
   /// Tag-name for this [XmlNode]
   String tagName;
 
+  /// [XmlNode] type
+  XmlNodeType type;
+
   /// Attributes as key-value pairs
-  Map<String, int> attributes;
+  Map<String, dynamic> attributes = {};
 
   /// Parent [XmlNode]
   XmlNode parent;
@@ -26,7 +36,10 @@ class XmlNode {
   String text;
 
   /// Children under this [XmlNode]
-  List<XmlNode> children;
+  List<XmlNode> children = [];
+
+  /// A basic XmlNode
+  XmlNode();
 
   /// Constructs a Root Node
   XmlNode.root({

@@ -1,3 +1,7 @@
+import 'package:sample/xml_master/stack.dart';
+import 'package:sample/xml_master/xml_document.dart';
+import 'package:sample/xml_master/xml_node.dart';
+
 import './exception.dart';
 
 /// [Symbol] represents symbols used in sample XML
@@ -10,6 +14,9 @@ enum Symbol {
 
   /// '>' symbol
   close,
+
+  /// '/>' symbol
+  selfClose,
 
   /// **"** symbol
   double_quots,
@@ -154,23 +161,217 @@ class XmlParser {
   bool _tagWordSeq;
   // Under sequence of text outside of the tag
   bool _normalTextSeq;
-
-  XmlParser(this.text);
+  // List of tokens
+  List<dynamic> tokens;
+  XmlParser(this.text) {
+    // Creating tokens
+    lexer();
+    // Parsing to XML tree
+    parser();
+  }
 
   /// [parser] parses and converts to [XmlDocument] based on token context
-  void parser() {}
+  void parser() {
+    var target, target_next;
+    List<String> tagStack;
+    tagStack = [];
+    var docVersion = '1.0';
+    var docEncoding = 'UTF-8';
+    var docSize = 1;
+    String instTag;
+    String instProp;
+    String instPropVal;
+    XmlDocument document;
+    XmlNode prevNode;
+    XmlNode currentNode;
+    XmlNode node1;
+    XmlNode node2;
+    XmlNode node3;
+    bool awaitValue = false;
+    bool awaitInstructions = false;
+    bool inEndTag = false;
+    bool expectEndTag = false;
+    bool documentDeclarationCompleted = false;
+    String awaitValueOfProp;
+    for (var j = 0; j < tokens.length; j++) {
+      target = tokens[j];
+      if (j + 1 < tokens.length) target_next = tokens[j + 1];
+      if (target is Symbol) {
+        switch (target) {
+          case Symbol.tagBeg:
+            if (document == null) {
+              currentNode = XmlNode();
+              document =
+                  XmlDocument(currentNode, docVersion, docEncoding, docSize);
+              currentNode.type = XmlNodeType.root;
+            } else if (currentNode == null) {
+              currentNode = XmlNode();
+              document.root = currentNode;
+              currentNode.type = XmlNodeType.root;
+              document.size++;
+              currentNode.type = XmlNodeType.element;
+            } else if (prevNode != null) {
+              if (prevNode.tagName == currentNode.parent.tagName) {
+                currentNode = prevNode;
+                prevNode = prevNode.parent;
+              } else {
+                throw UnexpectedTokenException('Parsing error.');
+              }
+            } else {
+              prevNode = currentNode;
+              currentNode = XmlNode();
+              currentNode.parent = prevNode;
+              document.size++;
+              prevNode.addChild(currentNode);
+              currentNode.type = XmlNodeType.element;
+            }
+            break;
+          case Symbol.tagEnd:
+            if (expectEndTag) {
+              inEndTag = true;
+              expectEndTag = false;
+            } else {
+              throw UnexpectedTokenException();
+            }
+            break;
+          case Symbol.double_quots:
+            // ignore, lexer handled
+            break;
+          case Symbol.single_quots:
+            // ignore, lexer handled
+            break;
+          case Symbol.lineBreak:
+            continue;
+            break;
+          case Symbol.space:
+            continue;
+            break;
+          case Symbol.stringtext:
+            // ignore, lexer handled
+            break;
+          case Symbol.instruction:
+            // To get document description
+            awaitInstructions = true;
+
+            break;
+          case Symbol.instructionEnd:
+            // To complete document description
+            if (awaitInstructions && !documentDeclarationCompleted) {
+              if (instTag == 'xml') {
+                if (document == null) {
+                  document =
+                      XmlDocument(null, docVersion, docEncoding, docSize);
+                } else {
+                  document.version = docVersion;
+                  document.encoding = docEncoding;
+                  documentDeclarationCompleted = true;
+                }
+              }
+              awaitInstructions = false;
+              continue;
+            }
+            break;
+          case Symbol.assignment:
+            try {
+              if (!awaitValue) {
+                throw UnexpectedTokenException(
+                    'Unexpected assignment operator');
+              }
+            } catch (e) {
+              print('index: $j\n$tokens');
+            }
+            break;
+          case Symbol.tabSpace:
+            // ignore
+            break;
+          case Symbol.close:
+            if (inEndTag) {
+              if (tagStack.removeLast() == currentNode.tagName) {
+                prevNode = currentNode;
+                currentNode = null;
+                inEndTag = false;
+              } else {
+                throw UnexpectedTokenException(
+                    'start & end tagnames don\'t match.');
+              }
+            } else {
+              expectEndTag = true;
+            }
+            break;
+          case Symbol.selfClose:
+            tagStack.removeLast();
+            prevNode = currentNode;
+            currentNode = null;
+            break;
+        }
+      }
+      if (target is TagWord) {
+        if (awaitInstructions && !documentDeclarationCompleted) {
+          // For complete document declaration
+          if (instTag == null) {
+            instTag = target.tagWord;
+          }
+          if (instTag == 'xml') {
+            instProp = target.tagWord;
+            awaitValue = true;
+          }
+          continue;
+        }
+        if (currentNode.tagName == null) {
+          currentNode.tagName = target.tagWord;
+          tagStack.add(currentNode.tagName);
+          continue;
+        }
+        currentNode.attributes[target.tagWord] = '';
+        awaitValue = true;
+        awaitValueOfProp = target.tagWord;
+      }
+      if (target is Text) {
+        if (awaitInstructions && !documentDeclarationCompleted && awaitValue) {
+          // For complete document declaration
+          if (instTag == 'xml') {
+            if (instProp == 'version') {
+              docVersion = target.text;
+            }
+            if (instProp == 'encoding') {
+              docEncoding = target.text;
+            }
+            awaitValue = false;
+          }
+          continue;
+        }
+        if (awaitValue) {
+          try {
+            currentNode.attributes[awaitValueOfProp] = target.text;
+          } catch (e) {
+            print('index: $j');
+            print('$tokens');
+            rethrow;
+          }
+
+          awaitValue = false;
+          awaitValueOfProp = null;
+          continue;
+        }
+        currentNode.text = target.text;
+        if (currentNode.attributes == null) {
+          currentNode.type = XmlNodeType.text;
+        } else {
+          currentNode.type = XmlNodeType.element;
+        }
+      }
+    }
+  }
 
   /// [lexer] adds more meaning to tokens
-  List<dynamic> lexer() {
-    List<dynamic> tokens;
+  void lexer() {
     tokens = [];
     _valueSeq = false;
     _tagWordSeq = false;
     _normalTextSeq = false;
-
     // Stores String temporarily
     String cacheString;
-
+    cacheString = '';
     // Started lexing in an iterator fashion
     for (_i = 0; _i < text.length; _i++) {
       _target = text[_i];
@@ -184,11 +385,13 @@ class XmlParser {
       // if previously the sequence was a tag's name or property but the current character isn't
       // then add a [TagWord] with the [cachedString] to token list
       if (_tagWordSeq && char != Symbol.stringtext) {
-        tokens.add(
-          TagWord(
-            cacheString,
-          ),
-        );
+        if (cacheString.isNotEmpty) {
+          tokens.add(
+            TagWord(
+              cacheString,
+            ),
+          );
+        }
         _tagWordSeq = false;
         cacheString = '';
       }
@@ -230,6 +433,8 @@ class XmlParser {
             cacheString = '$cacheString$_target';
           } else {
             tokens.add(char);
+            _tagWordSeq = true;
+            cacheString = '';
           }
           break;
         // Out of tags so only normal texts exists
@@ -240,6 +445,7 @@ class XmlParser {
           _normalTextSeq = true;
           tokens.add(char);
           break;
+        case Symbol.instruction:
         case Symbol.tagEnd:
         case Symbol.tagBeg:
           if (cacheString.isNotEmpty) {
@@ -257,7 +463,6 @@ class XmlParser {
           tokens.add(char);
       }
     }
-    return tokens;
   }
 
   /// [tokenizer] returns correct XML token identified from text
@@ -275,7 +480,7 @@ class XmlParser {
       case '/':
         if (_target_next == '>') {
           _i++;
-          return Symbol.close;
+          return Symbol.selfClose;
         }
         break;
       case '>':
@@ -312,7 +517,7 @@ class XmlParser {
 String toast(String text) {
   print('[toast] using tokenizer');
   List<dynamic> tokenList;
-  tokenList = XmlParser(text).lexer();
+  tokenList = XmlParser(text).tokens;
   print(tokenList);
   print('[toast] joining');
   return tokenList.join();
