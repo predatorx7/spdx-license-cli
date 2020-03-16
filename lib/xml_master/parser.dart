@@ -179,19 +179,15 @@ class XmlParser {
     var docSize = 1;
     String instTag;
     String instProp;
-    String instPropVal;
     XmlDocument document;
     XmlNode prevNode;
     XmlNode currentNode;
-    XmlNode node1;
-    XmlNode node2;
-    XmlNode node3;
-    bool tabSpacesFixed = false;
-    bool awaitValue = false;
-    bool awaitInstructions = false;
-    bool awaitTagname = false;
-    bool inEndTag = false;
-    bool documentDeclarationCompleted = false;
+    var tabSpacesFixed = false;
+    var awaitValue = false;
+    var awaitInstructions = false;
+    var awaitTagname = false;
+    var inEndTag = false;
+    var documentDeclarationCompleted = false;
     String awaitValueOfProp;
     for (var j = 0; j < tokens.length; j++) {
       target = tokens[j];

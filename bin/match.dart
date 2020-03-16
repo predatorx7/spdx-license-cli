@@ -1,8 +1,7 @@
-import 'package:sample/string_match.dart' as stringMatch;
+import 'package:sample/string_match.dart' as string_match;
 
 void main(List<String> args) {
   double res;
-  print(args);
-  res = stringMatch.diceMatch(args[0], args[1]);
-  print(res);
+  res = string_match.diceMatch(args[0], args[1]) * 100;
+  print('$res%');
 }
