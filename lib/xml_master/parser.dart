@@ -172,24 +172,37 @@ class XmlParser {
     var expectAttributeValue = false;
     var underEndingTag = false;
     var currentNamespace = '';
+    var afterClosingTag = false;
+
     // space
     targetNode = document.root;
     attribute_map = {};
 
     for (var i = 0; i < tokens.length; i++) {
-      print(
-          'At $i/${tokens.length - 1}, [${i - 1 >= 0 ? tokens[i - 1] : null} ${tokens[i]} ${i + 1 < tokens.length ? tokens[i + 1] : null}]');
+      // print(
+      //     'At $i/${tokens.length - 1}, [${i - 1 >= 0 ? tokens[i - 1] : null} ${tokens[i]} ${i + 1 < tokens.length ? tokens[i + 1] : null}]');
       var target = tokens[i];
       // var target_next = i + 1 < tokens.length ? tokens[i + 1] : null;
       if (target is Symbol) {
         switch (target) {
           case Symbol.begTag:
             // Create a new Node and pass the previous one as it's parent
-            targetNode = XmlNode.create(parentNode: targetNode);
             // Add current node to the children list of it's parent
+            if (afterClosingTag) {
+              // It's sibling to previous node so this new one will have the same parent
+              targetNode = XmlNode.create(targetNode.parent);
+              targetNode.parent.addChild(targetNode);
+              afterClosingTag = false;
+              continue;
+            }
+            // It's a new xml node
+            targetNode = XmlNode.create(targetNode);
+            document.root ??= targetNode;
             if (targetNode.parent != null) {
               targetNode.parent.addChild(targetNode);
             }
+
+            /// TODO print(targetNode);
             break;
           case Symbol.instruction:
             if (!documentDeclarationCompleted) {
@@ -200,6 +213,7 @@ class XmlParser {
           case Symbol.instructionEnd:
             if (!documentDeclarationCompleted) {
               documentDeclarationCompleted = true;
+              attribute_map = {};
             }
             expectAttributeDefinition = false;
             expectInstructions = false;
@@ -207,18 +221,24 @@ class XmlParser {
           case Symbol.closeTag:
             if (!underEndingTag) {
               currentNamespace = targetNode.tagName;
-              unResolvedTags.add(targetNode);
               targetNode.attributes.addAll(attribute_map);
               attribute_map = {};
-              print(targetNode);
             } else {
-              targetNode = targetNode.parent;
+              afterClosingTag = true;
             }
-
+            // TODO
+            // print('${targetNode} at $i');
+            // print(
+            //     '${i - 1 >= 0 ? tokens[i - 1] : null} ${tokens[i]} ${i + 1 < tokens.length ? tokens[i + 1] : null}');
             expectAttributeDefinition = false;
             underEndingTag = false;
             break;
           case Symbol.endTag:
+            if (afterClosingTag) {
+              // If previous was a node's ending tag, so the current endTag belongs to the previous node's parent
+              targetNode = targetNode.parent;
+              afterClosingTag = false;
+            }
             underEndingTag = true;
             break;
           case Symbol.selfCloseTag:
@@ -265,8 +285,14 @@ class XmlParser {
         }
         if (!expectAttributeDefinition) {
           // namespace element is tagname
-          targetNode.tagName = target.tagWord;
-          expectAttributeDefinition = true;
+          if (underEndingTag) {
+            if (targetNode.tagName != target.tagWord) {
+              throw IllegalTagwordException('The Tagnames are not matching');
+            }
+          } else {
+            targetNode.tagName = target.tagWord;
+            expectAttributeDefinition = true;
+          }
         } else {
           // It's attribute definition (not tagname)
           if (!expectAttributeValue) {
@@ -493,13 +519,11 @@ class XmlLexer {
 }
 
 String toast(String text) {
-  print('[toast] using tokenizer');
   List<dynamic> tokenList;
   XmlParser parser = XmlParser(text);
   tokenList = parser.tokens;
-  print(tokenList);
+  // print(tokenList);
   var doc_xml = parser.parse();
-  print('To Xml again');
   print(doc_xml);
   // return tokenList.join();
 }

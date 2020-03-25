@@ -45,10 +45,9 @@ class XmlNode {
   /// A XmlNode
   XmlNode();
 
-  factory XmlNode.create({XmlNode parentNode}) {
-    var x = XmlNode()
-      ..parent = parentNode
-      ..tagName = 'parsererror';
+  factory XmlNode.create(XmlNode parentNode) {
+    var x = XmlNode();
+    x.parent = parentNode;
     return x;
   }
 
@@ -87,6 +86,11 @@ class XmlNode {
     return true;
   }
 
+  bool hasText() {
+    if (text != null ?? text != '') return false;
+    return true;
+  }
+
   /// Number of child nodes in [children] of this [XmlNode]
   int get childCount => children.length;
 
@@ -112,24 +116,28 @@ class XmlNode {
   String toString() {
     String message;
     message = '<${tagName}';
-    if (attributes.isNotEmpty) {
+    if (attributes?.isNotEmpty ?? false) {
       for (var attribute in attributes.keys) {
-        message = '$message $attribute="${attributes[attribute]}"';
+        message = '$message $attribute = "${attributes[attribute]}"';
       }
     }
-    if (children?.isEmpty ?? true) {
-      message = '$message/>\n';
+    if (this.isSelfClosing()) {
+      message = '$message />\n';
       return message;
     }
-    message = '$message>';
-    if (text?.isNotEmpty ?? true) {
-      message = '$message$text</$tagName>\n';
+    message = '$message >';
+    if (this.hasChildren()) {
+      for (var node in children) {
+        message += '\n$node';
+      }
+    }
+
+    if (this.hasText()) {
+      message += '$text</$tagName>\n';
       return message;
     }
-    for (var node in children) {
-      message = '$message${node.toString()}';
-    }
-    message = '$message</$tagName>\n';
+
+    message += '\n</$tagName>\n';
     return message;
   }
 }

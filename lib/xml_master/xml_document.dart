@@ -3,7 +3,7 @@ import './xml_node.dart';
 /// [XmlDocument] is an XML document tree.
 class XmlDocument {
   /// root [XmlNode] of this document (descendant)
-  final XmlNode root = XmlNode.create();
+  XmlNode root;
 
   String version;
 
