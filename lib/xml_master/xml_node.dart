@@ -1,4 +1,5 @@
 import 'package:meta/meta.dart' show required;
+import 'parser.dart' show Text;
 
 class RootNodeDeleteException implements Exception {
   final message =
@@ -37,7 +38,7 @@ class XmlNode {
   XmlNode parent;
 
   /// Text stored by this [XmlNode]
-  String text;
+  String text = '';
 
   /// Children under this [XmlNode]
   List<XmlNode> children = [];
@@ -80,6 +81,21 @@ class XmlNode {
     children.removeWhere((XmlNode i) => i.tagName == node.tagName);
   }
 
+  bool setText(Text text) {
+    bool hasOther;
+    for (var i = 0; i < text.text.length; i++) {
+      var tx = text.text[i];
+      if (tx != ' ' || tx != '\t' || tx != '\s') {
+        hasOther = true;
+      }
+    }
+    if (!hasOther) {
+      return false;
+    }
+    this.text += text.toText();
+    return this.text.isNotEmpty;
+  }
+
   /// Returns true if children exists
   bool hasChildren() {
     if (children?.isEmpty ?? true) return false;
@@ -87,8 +103,8 @@ class XmlNode {
   }
 
   bool hasText() {
-    if (text != null ?? text != '') return false;
-    return true;
+    if (text != null ?? text != '') return true;
+    return false;
   }
 
   /// Number of child nodes in [children] of this [XmlNode]
@@ -115,29 +131,33 @@ class XmlNode {
   @override
   String toString() {
     String message;
+
     message = '<${tagName}';
     if (attributes?.isNotEmpty ?? false) {
       for (var attribute in attributes.keys) {
         message = '$message $attribute = "${attributes[attribute]}"';
       }
     }
-    if (this.isSelfClosing()) {
+
+    if (isSelfClosing()) {
       message = '$message />\n';
       return message;
     }
-    message = '$message >';
-    if (this.hasChildren()) {
+
+    message = '$message>';
+
+    if (hasChildren()) {
       for (var node in children) {
         message += '\n$node';
       }
+      message += '\n</$tagName>\n';
     }
 
-    if (this.hasText()) {
+    if (hasText()) {
       message += '$text</$tagName>\n';
       return message;
     }
 
-    message += '\n</$tagName>\n';
     return message;
   }
 }

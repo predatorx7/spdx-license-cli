@@ -322,6 +322,7 @@ class XmlParser {
               }
             }
           }
+          continue;
         } else if (expectAttributeDefinition) {
           // It's attribute definition (not tagname)
           if (expectAttributeValue) {
@@ -330,10 +331,9 @@ class XmlParser {
             lastAttribute = null;
             expectAttributeValue = false;
           }
-        } else {
-          // These are regular text
-          targetNode.text = target.text;
+          continue;
         }
+        targetNode.setText(target);
       }
     }
     return document;
