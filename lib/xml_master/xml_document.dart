@@ -3,18 +3,19 @@ import './xml_node.dart';
 /// [XmlDocument] is an XML document tree.
 class XmlDocument {
   /// root [XmlNode] of this document (descendant)
-  XmlNode root;
+  final XmlNode root = XmlNode.create();
 
   String version;
 
   String encoding;
 
-  int size;
-
   /// [tabSize] will be the number of spaces to represent a single tab
   int tabSize;
 
-  XmlDocument(this.root, this.version, this.encoding, this.size);
+  XmlDocument(
+    this.version,
+    this.encoding,
+  );
 
   String toXmlString() => toString();
 
@@ -22,8 +23,7 @@ class XmlDocument {
   String toString() {
     String message;
     message = '<?xml version="$version" encoding="$encoding"?>\n';
-    XmlNode current;
-    message = '$message$current';
+    message = '$message$root';
     return message;
   }
 }

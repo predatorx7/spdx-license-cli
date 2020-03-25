@@ -25,6 +25,8 @@ class XmlNode {
   /// Tag-name for this [XmlNode]
   String tagName;
 
+  String namespace;
+
   /// [XmlNode] type
   XmlNodeType type;
 
@@ -40,33 +42,19 @@ class XmlNode {
   /// Children under this [XmlNode]
   List<XmlNode> children = [];
 
-  /// A basic XmlNode
+  /// A XmlNode
   XmlNode();
 
-  /// Constructs a Root Node
-  XmlNode.root({
-    @required this.tagName,
-    this.children,
-  });
+  factory XmlNode.create({XmlNode parentNode}) {
+    var x = XmlNode()
+      ..parent = parentNode
+      ..tagName = 'parsererror';
+    return x;
+  }
 
-  /// Constructs an Element Node
-  XmlNode.element({
-    @required this.tagName,
-    @required this.parent,
-    this.text,
-    this.children,
-  });
-
-  /// Constructs a Text Node
-  XmlNode.text({
-    @required this.tagName,
-    @required this.parent,
-    @required this.text,
-  });
-
-  XmlNode.comment({
-    this.text,
-  });
+  bool isSelfClosing() {
+    return (text?.isEmpty ?? true) && (childCount == 0);
+  }
 
   /// Delete this Node & it's children
   static void delete(XmlNode node) {
@@ -124,8 +112,10 @@ class XmlNode {
   String toString() {
     String message;
     message = '<${tagName}';
-    for (var attribute in attributes.keys) {
-      message = '$message $attribute="${attributes[attribute]}"';
+    if (attributes.isNotEmpty) {
+      for (var attribute in attributes.keys) {
+        message = '$message $attribute="${attributes[attribute]}"';
+      }
     }
     if (children?.isEmpty ?? true) {
       message = '$message/>\n';

@@ -83,8 +83,9 @@ void main(List<String> arguments) async {
   switch (useAs) {
     case _TargetType.filePath:
       // Copies SPDX XML License file to temp folder
-      file = await File(target)
-          .copy(path.join(globals.tempPath, path.basename(target)));
+      var newPath = path.join(globals.tempPath, path.basename(target));
+      await File(target).copy(newPath);
+      file = await File(newPath);
       break;
     case _TargetType.url:
       // Downloads SPDX XML License file
