@@ -30,7 +30,7 @@ class IllegalTagwordException implements Exception {
   String message;
   final word;
   IllegalTagwordException([this.word]) {
-    if (message == null) {
+    if (word == null) {
       message = 'Tagword has illegal character';
     } else {
       message = '"$word" has illegal character';

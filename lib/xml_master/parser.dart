@@ -77,7 +77,7 @@ class NamespaceWord {
   NamespaceWord(this.tagWord) {
     // check if tagword uses legal characters
     if (!_isValidTagword(tagWord)) {
-      throw IllegalTagwordException(tagWord);
+      // TODO throw IllegalTagwordException(tagWord);
     }
   }
 
@@ -162,16 +162,13 @@ class XmlParser {
     );
     XmlNode targetNode;
     var documentDeclarationCompleted = false;
-    var skipEndTag = false;
     Map<String, dynamic> attribute_map;
     String lastAttribute;
-    var unResolvedTags = [];
     // expect tokens
     var expectInstructions = false;
     var expectAttributeDefinition = false;
     var expectAttributeValue = false;
     var underEndingTag = false;
-    var currentNamespace = '';
     var afterClosingTag = false;
 
     // space
@@ -179,10 +176,7 @@ class XmlParser {
     attribute_map = {};
 
     for (var i = 0; i < tokens.length; i++) {
-      // print(
-      //     'At $i/${tokens.length - 1}, [${i - 1 >= 0 ? tokens[i - 1] : null} ${tokens[i]} ${i + 1 < tokens.length ? tokens[i + 1] : null}]');
       var target = tokens[i];
-      // var target_next = i + 1 < tokens.length ? tokens[i + 1] : null;
       if (target is Symbol) {
         switch (target) {
           case Symbol.begTag:
@@ -201,8 +195,6 @@ class XmlParser {
             if (targetNode.parent != null) {
               targetNode.parent.addChild(targetNode);
             }
-
-            /// TODO print(targetNode);
             break;
           case Symbol.instruction:
             if (!documentDeclarationCompleted) {
@@ -220,16 +212,11 @@ class XmlParser {
             break;
           case Symbol.closeTag:
             if (!underEndingTag) {
-              currentNamespace = targetNode.tagName;
               targetNode.attributes.addAll(attribute_map);
               attribute_map = {};
             } else {
               afterClosingTag = true;
             }
-            // TODO
-            // print('${targetNode} at $i');
-            // print(
-            //     '${i - 1 >= 0 ? tokens[i - 1] : null} ${tokens[i]} ${i + 1 < tokens.length ? tokens[i + 1] : null}');
             expectAttributeDefinition = false;
             underEndingTag = false;
             break;
@@ -287,7 +274,7 @@ class XmlParser {
           // namespace element is tagname
           if (underEndingTag) {
             if (targetNode.tagName != target.tagWord) {
-              throw IllegalTagwordException('The Tagnames are not matching');
+              // TODO throw IllegalTagwordException('The Tagnames are not matching');
             }
           } else {
             targetNode.tagName = target.tagWord;
@@ -443,6 +430,7 @@ class XmlLexer {
           break;
         // Out of tags so only normal texts exists
         case Symbol.instructionEnd:
+        case Symbol.selfCloseTag:
         case Symbol.closeTag:
           _tagWordSeq = false;
           _valueSeq = false;
@@ -516,14 +504,4 @@ class XmlLexer {
     }
     return Symbol.stringtext;
   }
-}
-
-String toast(String text) {
-  List<dynamic> tokenList;
-  XmlParser parser = XmlParser(text);
-  tokenList = parser.tokens;
-  // print(tokenList);
-  var doc_xml = parser.parse();
-  print(doc_xml);
-  // return tokenList.join();
 }

@@ -5,7 +5,6 @@ import 'package:sample/xml_master/parser.dart';
 
 import './get_content.dart';
 import './globals.dart' as globals;
-import 'handle_xml.dart';
 
 /// Converts XML file's text to markdown and display it on console
 void sample(File file) async {
@@ -16,17 +15,19 @@ void sample(File file) async {
   // Raw content from file
   String content;
   // Parsed text from raw content
-  String parsedText;
+  String markdownText;
 
   // get raw file content
   content = await getContent(file);
   vPrint(content);
   // Parse & Make a DOM tree
   // [UNDO] parsedText = XMLHandler(content).toString();
-  parsedText = toast(content);
+  var parser = XmlParser(content);
+  var xmlDocument = parser.parse();
+  markdownText = xmlDocument.toMarkdown();
   // Convert to Markdown
   // Print to console
-  print('Parsed:\n$parsedText');
+  print('$markdownText');
 
   // cleaning up temp files and downloads if specified
   if (globals.deleteDownloads) {

@@ -7,7 +7,6 @@ environment:
   sdk: '>=2.7.0 <3.0.0'
 
 dependencies:
-  xml: ^3.7.0
   path: ^1.6.0
   args: ^1.5.3
   validators: ^2.0.0+1

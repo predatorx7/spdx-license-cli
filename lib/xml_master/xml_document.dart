@@ -18,6 +18,11 @@ class XmlDocument {
   );
 
   String toXmlString() => toString();
+  String toMarkdown() {
+    String message;
+    message = root.toMarkdown();
+    return message;
+  }
 
   @override
   String toString() {

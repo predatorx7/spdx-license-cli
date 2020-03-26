@@ -1,4 +1,7 @@
 import 'package:meta/meta.dart' show required;
+import 'package:sample/matcher.dart' as mat;
+import 'package:sample/xml_master/format.dart';
+import 'package:validators/validators.dart';
 import 'parser.dart' show Text;
 
 class RootNodeDeleteException implements Exception {
@@ -85,7 +88,7 @@ class XmlNode {
     bool hasOther;
     for (var i = 0; i < text.text.length; i++) {
       var tx = text.text[i];
-      if (tx != ' ' || tx != '\t' || tx != '\s') {
+      if (tx != ' ' || tx != '\t') {
         hasOther = true;
       }
     }
@@ -126,6 +129,61 @@ class XmlNode {
       }
     });
     return matchedElements;
+  }
+
+  String toMarkdown({List unsolvedStyles}) {
+    String message;
+    message = '';
+    unsolvedStyles ??= [];
+    // pre-Styling
+    if (tagName == 'br') {
+      message += '\n';
+      return message;
+    }
+    if (tagName == 'titleText') {
+      unsolvedStyles.add(tagName);
+    }
+    if (tagName == 'p') {
+      if (unsolvedStyles.contains('titleText')) {
+        message += '# ';
+        unsolvedStyles.remove('titleText');
+      } else {
+        message += '\n';
+      }
+    }
+
+    if (tagName == 'bullet') {
+      var bulletType;
+      if (isNumeric(text[0])) {
+        bulletType = '1. ';
+      } else {
+        bulletType = '- ';
+      }
+      text = bulletType + text.substring(3, text.length);
+      // return message;
+      return '$message${XmlFormatString(text).format()}\n\n';
+    }
+
+    // Content ====
+    if (hasChildren()) {
+      for (var node in children) {
+        message += node.toMarkdown(unsolvedStyles: unsolvedStyles);
+      }
+    }
+    if (hasText()) {
+      if (mat.isURL(text.trim())) {
+        message += '[$tagName](${text.trim()})\n';
+      } else {
+        message = '$message${XmlFormatString(text).format()}';
+      }
+    }
+
+    // ====
+    // post Styling
+    if (tagName == 'p') {
+      message += '\n\n';
+    }
+    return message;
   }
 
   @override
